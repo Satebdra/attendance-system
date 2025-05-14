@@ -410,6 +410,22 @@ def load_user(user_id):
 
 # Routes
 @app.route('/')
+def index():
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint that returns immediately"""
+    return jsonify({'status': 'ok'})
+
+@app.route('/loading')
+def loading():
+    """Show loading page while the server is starting up"""
+    return render_template('loading.html')
+
+@app.route('/dashboard')
 @login_required
 def dashboard():
     today = datetime.now().date()
