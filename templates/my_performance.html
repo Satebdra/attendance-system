@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Performance Overview Card -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Overall Rating
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ "%.1f"|format(current_user.performance_rating) }}/5.0
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-star fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Latest Review
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if reviews %}
+                                    {{ reviews[0].review_period }}
+                                {% else %}
+                                    No Reviews
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Reviews
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ reviews|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Performance Trend
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if reviews|length >= 2 %}
+                                    {% if reviews[0].overall_rating > reviews[1].overall_rating %}
+                                        <i class="fas fa-arrow-up text-success"></i> Improving
+                                    {% elif reviews[0].overall_rating < reviews[1].overall_rating %}
+                                        <i class="fas fa-arrow-down text-danger"></i> Declining
+                                    {% else %}
+                                        <i class="fas fa-equals text-info"></i> Stable
+                                    {% endif %}
+                                {% else %}
+                                    Not Available
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-line fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance History -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Performance History</h6>
+        </div>
+        <div class="card-body">
+            {% if reviews %}
+                <div class="chart-area mb-4">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Review Period</th>
+                                <th>Attendance</th>
+                                <th>Punctuality</th>
+                                <th>Productivity</th>
+                                <th>Overall</th>
+                                <th>Reviewed By</th>
+                                <th>Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for review in reviews %}
+                            <tr>
+                                <td>{{ review.review_period }}</td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: {{ (review.attendance_score/5)*100 }}%">
+                                            {{ "%.1f"|format(review.attendance_score) }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                             style="width: {{ (review.punctuality_score/5)*100 }}%">
+                                            {{ "%.1f"|format(review.punctuality_score) }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (review.productivity_score/5)*100 }}%">
+                                            {{ "%.1f"|format(review.productivity_score) }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                             style="width: {{ (review.overall_rating/5)*100 }}%">
+                                            {{ "%.1f"|format(review.overall_rating) }}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ review.reviewer.name }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary view-comments" 
+                                            data-comments="{{ review.comments }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-center text-muted">No performance reviews available yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Comments Modal -->
+<div class="modal fade" id="commentsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Review Comments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalComments"></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // View Comments
+    document.querySelectorAll('.view-comments').forEach(button => {
+        button.addEventListener('click', function() {
+            const comments = this.dataset.comments || 'No comments available';
+            document.getElementById('modalComments').textContent = comments;
+            const modal = new bootstrap.Modal(document.getElementById('commentsModal'));
+            modal.show();
+        });
+    });
+
+    {% if reviews %}
+    // Performance Chart
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ reviews|map(attribute='review_period')|list|tojson }}.reverse(),
+            datasets: [{
+                label: 'Overall Rating',
+                data: {{ reviews|map(attribute='overall_rating')|list|tojson }}.reverse(),
+                borderColor: '#f6c23e',
+                tension: 0.1
+            }, {
+                label: 'Attendance',
+                data: {{ reviews|map(attribute='attendance_score')|list|tojson }}.reverse(),
+                borderColor: '#4e73df',
+                tension: 0.1
+            }, {
+                label: 'Punctuality',
+                data: {{ reviews|map(attribute='punctuality_score')|list|tojson }}.reverse(),
+                borderColor: '#36b9cc',
+                tension: 0.1
+            }, {
+                label: 'Productivity',
+                data: {{ reviews|map(attribute='productivity_score')|list|tojson }}.reverse(),
+                borderColor: '#1cc88a',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+
+<style>
+.progress {
+    height: 20px;
+    background-color: #eaecf4;
+}
+.progress-bar {
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+}
+.chart-area {
+    height: 300px;
+}
+.border-left-primary {
+    border-left: 4px solid #4e73df !important;
+}
+.border-left-success {
+    border-left: 4px solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 4px solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 4px solid #f6c23e !important;
+}
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+</style>
+{% endblock %} 

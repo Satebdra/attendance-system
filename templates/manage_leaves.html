@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            {% if current_user.role == 'admin' %}
+                Final Leave Approvals
+            {% elif current_user.is_department_head %}
+                Department Leave Approvals
+            {% else %}
+                Team Leave Approvals
+            {% endif %}
+        </h1>
+    </div>
+
+    <!-- Leave Requests Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Pending Leave Requests</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>{{ leave.employee.name }}</td>
+                            <td>{{ leave.leave_type|title }}</td>
+                            <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ leave.reason }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'warning' if leave.status == 'pending' and leave.team_approval_status == 'pending'
+                                    else 'info' if leave.status == 'pending' and leave.team_approval_status == 'approved' and leave.dept_approval_status == 'pending'
+                                    else 'primary' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                    else 'success' if leave.status == 'approved'
+                                    else 'danger'
+                                }}">
+                                    {{ 
+                                        'Pending Team Approval' if leave.status == 'pending' and leave.team_approval_status == 'pending'
+                                        else 'Pending Dept. Approval' if leave.status == 'pending' and leave.team_approval_status == 'approved' and leave.dept_approval_status == 'pending'
+                                        else 'Pending Final Approval' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                        else leave.status|title 
+                                    }}
+                                </span>
+                            </td>
+                            <td>{{ leave.applied_on.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                            <td>
+                                {% if current_user.is_team_leader and leave.team_approval_status == 'pending' and leave.employee.team_leader_id == current_user.id %}
+                                    <div class="btn-group">
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}" class="me-2">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}">
+                                            <input type="hidden" name="action" value="reject">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% elif current_user.is_department_head and leave.team_approval_status == 'approved' and leave.dept_approval_status == 'pending' %}
+                                    <div class="btn-group">
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}" class="me-2">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}">
+                                            <input type="hidden" name="action" value="reject">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% elif current_user.role == 'admin' and leave.dept_approval_status == 'approved' and leave.status == 'pending' %}
+                                    <div class="btn-group">
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}" class="me-2">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('approve_leave', leave_id=leave.id) }}">
+                                            <input type="hidden" name="action" value="reject">
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">No action needed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center">No pending leave requests</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+.badge {
+    padding: 0.5em 0.75em;
+}
+.bg-warning {
+    background-color: #f6c23e !important;
+}
+.bg-info {
+    background-color: #36b9cc !important;
+}
+.bg-primary {
+    background-color: #4e73df !important;
+}
+.bg-success {
+    background-color: #1cc88a !important;
+}
+.bg-danger {
+    background-color: #e74a3b !important;
+}
+</style>
+{% endblock %} 

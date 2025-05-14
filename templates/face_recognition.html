@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Face Recognition Attendance</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Camera Feed</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center">
+                        <video id="video" width="100%" autoplay></video>
+                        <canvas id="canvas" style="display: none;"></canvas>
+                        <div class="mt-3">
+                            <button id="capture" class="btn btn-primary">Mark Attendance</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Status</h4>
+                </div>
+                <div class="card-body">
+                    <div id="status" class="alert alert-info">
+                        Please click "Mark Attendance" to verify your face.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const captureButton = document.getElementById('capture');
+    const statusDiv = document.getElementById('status');
+    
+    // Access webcam
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.textContent = 'Error accessing camera: ' + err.message;
+        });
+    
+    // Capture and verify face
+    captureButton.addEventListener('click', function() {
+        // Draw video frame to canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        // Convert canvas to blob
+        canvas.toBlob(function(blob) {
+            const formData = new FormData();
+            formData.append('photo', blob, 'photo.jpg');
+            
+            // Send to server
+            statusDiv.className = 'alert alert-info';
+            statusDiv.textContent = 'Processing...';
+            
+            fetch('/verify-face', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                statusDiv.className = data.success ? 'alert alert-success' : 'alert alert-danger';
+                statusDiv.textContent = data.message;
+                
+                if (data.success) {
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                statusDiv.className = 'alert alert-danger';
+                statusDiv.textContent = 'Error: ' + error.message;
+            });
+        }, 'image/jpeg');
+    });
+});
+</script>
+{% endblock %} 

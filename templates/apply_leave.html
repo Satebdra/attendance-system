@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Apply Leave</h1>
+    </div>
+
+    <!-- Leave Application Form -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Leave Application Form</h6>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('apply_leave') }}">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="leave_type" class="form-label">Leave Type</label>
+                        <select class="form-select" id="leave_type" name="leave_type" required>
+                            <option value="">Select Leave Type</option>
+                            <option value="casual">Casual Leave</option>
+                            <option value="sick">Sick Leave</option>
+                            <option value="annual">Annual Leave</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Leave Balance: <span class="text-primary">{{ current_user.leave_balance }}</span> days</label>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="reason" class="form-label">Reason</label>
+                    <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Submit Application
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recent Leave Applications -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Recent Leave Applications</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for leave in leaves %}
+                        <tr>
+                            <td>{{ leave.leave_type|title }}</td>
+                            <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                            <td>
+                                <span class="badge bg-{{ 
+                                    'warning' if leave.status == 'pending' and leave.dept_approval_status == 'pending'
+                                    else 'info' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                    else 'success' if leave.status == 'approved'
+                                    else 'danger'
+                                }}">
+                                    {{ 
+                                        'Pending Dept. Approval' if leave.status == 'pending' and leave.dept_approval_status == 'pending'
+                                        else 'Pending Final Approval' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                        else leave.status|title 
+                                    }}
+                                </span>
+                            </td>
+                            <td>{{ leave.applied_on.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No leave applications found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+
+    // Set minimum date as today
+    const today = new Date().toISOString().split('T')[0];
+    startDate.min = today;
+    endDate.min = today;
+
+    // Update end date minimum when start date changes
+    startDate.addEventListener('change', function() {
+        endDate.min = this.value;
+        if (endDate.value && endDate.value < this.value) {
+            endDate.value = this.value;
+        }
+    });
+});
+</script>
+{% endblock %} 

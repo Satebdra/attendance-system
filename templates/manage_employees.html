@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Manage Employees</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="fas fa-plus"></i> Add New Employee
+        </button>
+    </div>
+
+    <!-- Department Filter -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filter by Department</h6>
+        </div>
+        <div class="card-body">
+            <div class="btn-group mb-3">
+                <button class="btn btn-outline-primary active" data-department="all">All</button>
+                {% for dept_code, dept_name in departments.items() %}
+                <button class="btn btn-outline-primary" data-department="{{ dept_code }}">{{ dept_name }}</button>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Employees Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Employee List</h6>
+            <div>
+                <button class="btn btn-success btn-sm" onclick="exportToExcel()">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="employeesTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Employee ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Reporting To</th>
+                            <th>Role</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for employee in employees %}
+                        <tr data-department="{{ employee.department }}">
+                            <td>{{ employee.employee_id }}</td>
+                            <td>{{ employee.name }}</td>
+                            <td>
+                                <div>{{ employee.get_department_name() }}</div>
+                                {% if employee.is_department_head %}
+                                <span class="badge bg-primary">Department Head</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ employee.designation or 'Not Set' }}</td>
+                            <td>
+                                <div class="reporting-hierarchy">
+                                    {{ employee.get_reporting_hierarchy() }}
+                                </div>
+                            </td>
+                            <td>
+                                {% if employee.is_department_head %}
+                                    <span class="badge bg-primary">HOD</span>
+                                {% elif employee.is_team_leader %}
+                                    <span class="badge bg-info">Team Leader</span>
+                                {% elif employee.role == 'admin' %}
+                                    <span class="badge bg-danger">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Employee</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-info btn-sm edit-employee" data-employee-id="{{ employee.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm view-details" data-employee-id="{{ employee.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-warning btn-sm reset-password" data-employee-id="{{ employee.id }}" data-employee-name="{{ employee.name }}">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    {% if current_user.role == 'admin' %}
+                                    <form method="POST" action="{{ url_for('delete_employee', employee_id=employee.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Employee Modal -->
+<div class="modal fade" id="addEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_employee') }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="department" class="form-label">Department</label>
+                            <select class="form-control" id="department" name="department" required>
+                                <option value="">Select Department</option>
+                                {% for dept_code, dept_name in departments.items() %}
+                                <option value="{{ dept_code }}">{{ dept_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="designation" class="form-label">Designation</label>
+                            <input type="text" class="form-control" id="designation" name="designation" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-control" id="role" name="role" required>
+                                <option value="employee">Employee</option>
+                                <option value="team_leader">Team Leader</option>
+                                <option value="hod">Department Head</option>
+                                {% if current_user.role == 'admin' %}
+                                <option value="admin">Admin</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="reporting_to" class="form-label">Reporting To</label>
+                            <select class="form-control" id="reporting_to" name="reporting_to">
+                                <option value="">Select Supervisor</option>
+                                {% for emp in employees %}
+                                {% if emp.is_department_head or emp.is_team_leader %}
+                                <option value="{{ emp.id }}">{{ emp.name }} ({{ emp.get_department_name() }} - {{ 'HOD' if emp.is_department_head else 'Team Leader' }})</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="shift" class="form-label">Shift</label>
+                            <select class="form-control" id="shift" name="shift_id">
+                                <option value="">Select Shift</option>
+                                {% for shift in shifts %}
+                                <option value="{{ shift.id }}">{{ shift.name }} ({{ shift.start_time.strftime('%I:%M %p') }} - {{ shift.end_time.strftime('%I:%M %p') }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="base_salary" class="form-label">Base Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="base_salary" name="base_salary" required min="0" step="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal fade" id="employeeDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Employee Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="font-weight-bold">Personal Information</h6>
+                        <table class="table">
+                            <tr>
+                                <th>Employee ID:</th>
+                                <td id="details_employee_id"></td>
+                            </tr>
+                            <tr>
+                                <th>Name:</th>
+                                <td id="details_name"></td>
+                            </tr>
+                            <tr>
+                                <th>Email:</th>
+                                <td id="details_email"></td>
+                            </tr>
+                            <tr>
+                                <th>Department:</th>
+                                <td id="details_department"></td>
+                            </tr>
+                            <tr>
+                                <th>Designation:</th>
+                                <td id="details_designation"></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="font-weight-bold">Work Information</h6>
+                        <table class="table">
+                            <tr>
+                                <th>Role:</th>
+                                <td id="details_role"></td>
+                            </tr>
+                            <tr>
+                                <th>Reporting To:</th>
+                                <td id="details_reporting"></td>
+                            </tr>
+                            <tr>
+                                <th>Shift:</th>
+                                <td id="details_shift"></td>
+                            </tr>
+                            <tr>
+                                <th>Base Salary:</th>
+                                <td id="details_salary"></td>
+                            </tr>
+                            <tr>
+                                <th>Joining Date:</th>
+                                <td id="details_joining_date"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Employee Modal -->
+<div class="modal fade" id="editEmployeeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Employee</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editEmployeeForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_employee_id" class="form-label">Employee ID</label>
+                            <input type="text" class="form-control" id="edit_employee_id" name="employee_id" required readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="edit_name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="edit_email" name="email" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_department" class="form-label">Department</label>
+                            <select class="form-control" id="edit_department" name="department" required>
+                                <option value="">Select Department</option>
+                                {% for dept_code, dept_name in departments.items() %}
+                                <option value="{{ dept_code }}">{{ dept_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_designation" class="form-label">Designation</label>
+                            <input type="text" class="form-control" id="edit_designation" name="designation" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_role" class="form-label">Role</label>
+                            <select class="form-control" id="edit_role" name="role" required>
+                                <option value="employee">Employee</option>
+                                <option value="team_leader">Team Leader</option>
+                                <option value="hod">Department Head</option>
+                                {% if current_user.role == 'admin' %}
+                                <option value="admin">Admin</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_reporting_to" class="form-label">Reporting To</label>
+                            <select class="form-control" id="edit_reporting_to" name="reporting_to">
+                                <option value="">Select Supervisor</option>
+                                {% for emp in employees %}
+                                {% if emp.is_department_head or emp.is_team_leader %}
+                                <option value="{{ emp.id }}">{{ emp.name }} ({{ emp.get_department_name() }} - {{ 'HOD' if emp.is_department_head else 'Team Leader' }})</option>
+                                {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_shift" class="form-label">Shift</label>
+                            <select class="form-control" id="edit_shift" name="shift_id">
+                                <option value="">Select Shift</option>
+                                {% for shift in shifts %}
+                                <option value="{{ shift.id }}">{{ shift.name }} ({{ shift.start_time.strftime('%I:%M %p') }} - {{ shift.end_time.strftime('%I:%M %p') }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_base_salary" class="form-label">Base Salary</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input type="number" class="form-control" id="edit_base_salary" name="base_salary" required min="0" step="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Password Reset Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="resetPasswordForm">
+                <div class="modal-body">
+                    <p>Reset password for: <strong id="resetPasswordEmployeeName"></strong></p>
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-warning">Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Department filter
+    $('.btn-group button').click(function() {
+        $('.btn-group button').removeClass('active');
+        $(this).addClass('active');
+        
+        var department = $(this).data('department');
+        if (department === 'all') {
+            $('#employeesTable tbody tr').show();
+        } else {
+            $('#employeesTable tbody tr').hide();
+            $('#employeesTable tbody tr[data-department="' + department + '"]').show();
+        }
+    });
+
+    // Edit employee
+    $('.edit-employee').click(function() {
+        var employeeId = $(this).data('employee-id');
+        
+        editEmployee(employeeId);
+    });
+
+    // Handle form submission
+    document.getElementById('editEmployeeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const employeeId = this.getAttribute('data-employee-id');
+        const formData = new FormData(this);
+        
+        fetch(`/update-employee/${employeeId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Employee updated successfully');
+                location.reload();  // Refresh the page to show updated data
+            } else {
+                alert(data.message || 'Error updating employee. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating employee. Please try again.');
+        });
+    });
+
+    // Export to Excel
+    window.exportToExcel = function() {
+        var table = document.getElementById("employeesTable");
+        var html = table.outerHTML;
+        var url = 'data:application/vnd.ms-excel,' + encodeURIComponent(html);
+        var downloadLink = document.createElement("a");
+        document.body.appendChild(downloadLink);
+        downloadLink.href = url;
+        downloadLink.download = 'employees.xls';
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+
+    // Password Reset
+    $('.reset-password').click(function() {
+        var employeeId = $(this).data('employee-id');
+        var employeeName = $(this).data('employee-name');
+        
+        $('#resetPasswordEmployeeName').text(employeeName);
+        $('#resetPasswordForm').data('employee-id', employeeId);
+        new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+    });
+
+    $('#resetPasswordForm').submit(function(e) {
+        e.preventDefault();
+        
+        var employeeId = $(this).data('employee-id');
+        var newPassword = $('#new_password').val();
+        var confirmPassword = $('#confirm_password').val();
+        
+        if (newPassword !== confirmPassword) {
+            alert('Passwords do not match!');
+            return;
+        }
+        
+        fetch(`/reset-employee-password/${employeeId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                new_password: newPassword
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Password reset successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
+                $('#resetPasswordForm')[0].reset();
+            } else {
+                alert(data.message || 'Error resetting password');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error resetting password');
+        });
+    });
+});
+
+function editEmployee(employeeId) {
+    // Fetch employee details
+    fetch(`/employee-details/${employeeId}`)
+        .then(response => response.json())
+        .then(data => {
+            // Populate the edit form
+            document.getElementById('edit_employee_id').value = data.employee_id;
+            document.getElementById('edit_name').value = data.name;
+            document.getElementById('edit_email').value = data.email;
+            document.getElementById('edit_department').value = data.department;
+            document.getElementById('edit_designation').value = data.designation;
+            document.getElementById('edit_role').value = data.role;
+            document.getElementById('edit_reporting_to').value = data.reporting_to || '';
+            document.getElementById('edit_shift').value = data.shift_id || '';
+            document.getElementById('edit_base_salary').value = data.base_salary || '';
+            
+            // Store employee ID for form submission
+            document.getElementById('editEmployeeForm').setAttribute('data-employee-id', employeeId);
+            
+            // Show the modal
+            new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error fetching employee details. Please try again.');
+        });
+}
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+.reporting-hierarchy {
+    font-size: 0.9em;
+    color: #666;
+}
+.badge {
+    font-size: 0.8em;
+    padding: 0.4em 0.6em;
+}
+.btn-group {
+    gap: 0.25rem;
+}
+</style>
+{% endblock %} 

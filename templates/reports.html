@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Generate Attendance Reports</h2>
+    
+    <div class="card">
+        <div class="card-header">
+            <h4>Report Options</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('generate_report') }}">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="start_date" class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="end_date" class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="department" class="form-label">Department (Optional)</label>
+                        <input type="text" class="form-control" id="department" name="department">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="report_type" class="form-label">Report Format</label>
+                        <select class="form-control" id="report_type" name="report_type" required>
+                            <option value="excel">Excel (.xlsx)</option>
+                            <option value="csv">CSV</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Generate Report</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} 

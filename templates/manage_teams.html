@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Manage Teams</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTeamModal">
+            <i class="fas fa-plus"></i> Add New Team
+        </button>
+    </div>
+
+    <!-- Teams Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Teams</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Team Name</th>
+                            <th>Department</th>
+                            <th>Team Leader</th>
+                            <th>Members</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for team in teams %}
+                        <tr>
+                            <td>{{ team.name }}</td>
+                            <td>{{ team.department }}</td>
+                            <td>{{ team.leader.name if team.leader else 'Not Assigned' }}</td>
+                            <td>{{ team.members|length }} members</td>
+                            <td>{{ team.description }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-info btn-sm edit-team" data-team-id="{{ team.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-primary btn-sm manage-members" data-team-id="{{ team.id }}">
+                                        <i class="fas fa-users"></i>
+                                    </button>
+                                    <form method="POST" action="{{ url_for('delete_team', team_id=team.id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No teams found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Team Modal -->
+<div class="modal fade" id="addTeamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_team') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Team Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department</label>
+                        <input type="text" class="form-control" id="department" name="department" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="leader_id" class="form-label">Team Leader</label>
+                        <select class="form-control" id="leader_id" name="leader_id" required>
+                            <option value="">Select Team Leader</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.employee_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Team</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Team Modal -->
+<div class="modal fade" id="editTeamModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Team</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editTeamForm">
+                <div class="modal-body">
+                    <input type="hidden" id="edit_team_id">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Team Name</label>
+                        <input type="text" class="form-control" id="edit_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_department" class="form-label">Department</label>
+                        <input type="text" class="form-control" id="edit_department" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_leader_id" class="form-label">Team Leader</label>
+                        <select class="form-control" id="edit_leader_id" required>
+                            <option value="">Select Team Leader</option>
+                            {% for employee in employees %}
+                            <option value="{{ employee.id }}">{{ employee.name }} ({{ employee.employee_id }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="edit_description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Team Members Modal -->
+<div class="modal fade" id="manageTeamMembersModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manage Team Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="teamMembersForm">
+                <div class="modal-body">
+                    <input type="hidden" id="team_members_team_id">
+                    <div class="mb-3">
+                        <label class="form-label">Select Team Members</label>
+                        <div class="row">
+                            {% for employee in employees %}
+                            <div class="col-md-4 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input team-member-checkbox" type="checkbox" 
+                                           value="{{ employee.id }}" id="member_{{ employee.id }}">
+                                    <label class="form-check-label" for="member_{{ employee.id }}">
+                                        {{ employee.name }} ({{ employee.employee_id }})
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Members</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Edit Team
+    document.querySelectorAll('.edit-team').forEach(button => {
+        button.addEventListener('click', function() {
+            const teamId = this.dataset.teamId;
+            const row = this.closest('tr');
+            
+            document.getElementById('edit_team_id').value = teamId;
+            document.getElementById('edit_name').value = row.cells[0].textContent;
+            document.getElementById('edit_department').value = row.cells[1].textContent;
+            document.getElementById('edit_description').value = row.cells[4].textContent;
+            
+            const leaderName = row.cells[2].textContent;
+            const leaderSelect = document.getElementById('edit_leader_id');
+            Array.from(leaderSelect.options).forEach(option => {
+                if (option.text.includes(leaderName)) {
+                    option.selected = true;
+                }
+            });
+            
+            new bootstrap.Modal(document.getElementById('editTeamModal')).show();
+        });
+    });
+    
+    // Submit Edit Team Form
+    document.getElementById('editTeamForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const teamId = document.getElementById('edit_team_id').value;
+        const data = {
+            name: document.getElementById('edit_name').value,
+            department: document.getElementById('edit_department').value,
+            leader_id: document.getElementById('edit_leader_id').value,
+            description: document.getElementById('edit_description').value
+        };
+        
+        fetch(`/update-team/${teamId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+    
+    // Manage Team Members
+    document.querySelectorAll('.manage-members').forEach(button => {
+        button.addEventListener('click', function() {
+            const teamId = this.dataset.teamId;
+            document.getElementById('team_members_team_id').value = teamId;
+            
+            // Reset checkboxes
+            document.querySelectorAll('.team-member-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Get current team members and check their boxes
+            fetch(`/team-members/${teamId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.member_ids.forEach(id => {
+                    const checkbox = document.getElementById(`member_${id}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            });
+            
+            new bootstrap.Modal(document.getElementById('manageTeamMembersModal')).show();
+        });
+    });
+    
+    // Submit Team Members Form
+    document.getElementById('teamMembersForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const teamId = document.getElementById('team_members_team_id').value;
+        const memberIds = Array.from(document.querySelectorAll('.team-member-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+        
+        fetch(`/assign-team-members/${teamId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ member_ids: memberIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 

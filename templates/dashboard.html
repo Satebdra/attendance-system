@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Info Cards Row -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Today's Status</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if attendance %}
+                                <span class="badge bg-{{ 'success' if attendance.status == 'present' else 'warning' }}">
+                                    {{ attendance.status|title }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">Not Marked</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Check-in Time</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if attendance and attendance.check_in %}
+                                {{ attendance.check_in.strftime('%I:%M %p') }}
+                            {% else %}
+                                --:--
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Pending Leaves</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ pending_leaves|length }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Current Shift</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if current_user.shift %}
+                                {{ current_user.shift.name }}
+                            {% else %}
+                                Not Assigned
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-business-time fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Attendance Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Today's Attendance</h6>
+                <div class="btn-group">
+                    <form method="POST" action="{{ url_for('check_in') }}" class="me-2">
+                        <button type="submit" class="btn btn-success btn-sm" {{ 'disabled' if attendance and attendance.check_in }}>
+                            <i class="fas fa-sign-in-alt"></i> Check In
+                        </button>
+                    </form>
+                    <form method="POST" action="{{ url_for('check_out') }}">
+                        <button type="submit" class="btn btn-danger btn-sm" {{ 'disabled' if not attendance or attendance.check_out }}>
+                            <i class="fas fa-sign-out-alt"></i> Check Out
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    {% if attendance %}
+                        <div class="timeline-item">
+                            <i class="fas fa-circle text-success"></i>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Check In</h6>
+                                <p class="mb-0">{{ attendance.check_in.strftime('%I:%M %p') if attendance.check_in else 'Not checked in' }}</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <i class="fas fa-circle {{ 'text-success' if attendance.check_out else 'text-muted' }}"></i>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Check Out</h6>
+                                <p class="mb-0">{{ attendance.check_out.strftime('%I:%M %p') if attendance.check_out else 'Not checked out' }}</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No attendance recorded for today.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shift Information Card -->
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Shift Information</h6>
+            </div>
+            <div class="card-body">
+                {% if current_user.shift %}
+                    <div class="shift-info">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">Shift Name</div>
+                                <div class="h5 mb-0">{{ current_user.shift.name }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">Start Time</div>
+                                <div class="h5 mb-0">{{ current_user.shift.start_time.strftime('%I:%M %p') }}</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-xs font-weight-bold text-uppercase mb-1">End Time</div>
+                                <div class="h5 mb-0">{{ current_user.shift.end_time.strftime('%I:%M %p') }}</div>
+                            </div>
+                        </div>
+                        {% if current_user.shift.description %}
+                            <div class="text-xs font-weight-bold text-uppercase mb-1">Description</div>
+                            <p class="mb-0">{{ current_user.shift.description }}</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-0">No shift assigned.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leave Applications Table -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Recent Leave Applications</h6>
+        <a href="{{ url_for('apply_leave') }}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Apply Leave
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Status</th>
+                        <th>Applied On</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for leave in pending_leaves %}
+                    <tr>
+                        <td>{{ leave.leave_type|title }}</td>
+                        <td>{{ leave.start_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ leave.end_date.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <span class="badge bg-{{ 
+                                'warning' if leave.status == 'pending' and leave.dept_approval_status == 'pending'
+                                else 'info' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                else 'success' if leave.status == 'approved'
+                                else 'danger'
+                            }}">
+                                {{ 
+                                    'Pending Dept. Approval' if leave.status == 'pending' and leave.dept_approval_status == 'pending'
+                                    else 'Pending Final Approval' if leave.status == 'pending' and leave.dept_approval_status == 'approved'
+                                    else leave.status|title 
+                                }}
+                            </span>
+                        </td>
+                        <td>{{ leave.applied_on.strftime('%Y-%m-%d %I:%M %p') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center">No pending leave applications</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if current_user.role == 'admin' %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Admin Actions</h6>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('trigger_backup') }}" class="btn btn-primary">
+                    <i class="fas fa-database"></i> Backup Database
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<style>
+.border-left-primary {
+    border-left: 4px solid var(--primary-color) !important;
+}
+.border-left-success {
+    border-left: 4px solid #1cc88a !important;
+}
+.border-left-info {
+    border-left: 4px solid #36b9cc !important;
+}
+.border-left-warning {
+    border-left: 4px solid #f6c23e !important;
+}
+
+.timeline {
+    position: relative;
+    padding: 0;
+    list-style: none;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
+.timeline-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 0.35rem;
+    top: 1.5rem;
+    height: 100%;
+    width: 2px;
+    background: #e3e6f0;
+}
+
+.timeline-item i {
+    position: absolute;
+    left: 0;
+    top: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.timeline-content {
+    padding-left: 0.5rem;
+}
+
+.text-xs {
+    font-size: 0.7rem;
+}
+
+.text-gray-300 {
+    color: #dddfeb !important;
+}
+
+.text-gray-800 {
+    color: #5a5c69 !important;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+</style>
+{% endblock %} 
