@@ -1,13 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate
 
-# Upgrade pip
-pip install --upgrade pip
-
 # Install dependencies with optimizations
+pip install --upgrade pip
 pip install --no-cache-dir -r requirements.txt
 
 # Create necessary directories
